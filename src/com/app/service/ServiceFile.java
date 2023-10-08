@@ -96,13 +96,17 @@ public class ServiceFile {
     }
     
     public void receiveFile(Model_Package_Sender dataPackage) throws IOException {
+        System.out.println("receiveFile ok");
         if (!dataPackage.isFinish()) {
             fileReceivers.get(dataPackage.getFileID()).writeFile(dataPackage.getData());
         } else {
             fileReceivers.get(dataPackage.getFileID()).close();
         }
     }
-
+    public Model_File_Receiver setColseFile(int fileID){
+        Model_File_Receiver file = fileReceivers.get(fileID);
+        return file;
+    }
     public Model_Send_Message closeFile(Model_Receive_Image dataImage) throws IOException, SQLException {
         Model_File_Receiver file = fileReceivers.get(dataImage.getFileID());
         if (file.getMessage().getMessageType() == MessageType.IMAGE.getValue()) {
@@ -118,7 +122,9 @@ public class ServiceFile {
         //get message to send to target client when file receive finish
         return file.getMessage();
     }
-
+    public void closeFile(int fileID){
+        fileReceivers.remove(fileID);
+    }
     private String convertFileToBlurHash(File file, Model_Receive_Image dataImage) throws IOException {
         BufferedImage img = ImageIO.read(file);
         Dimension size = getAutoSize(new Dimension(img.getWidth(), img.getHeight()), new Dimension(200, 200));
