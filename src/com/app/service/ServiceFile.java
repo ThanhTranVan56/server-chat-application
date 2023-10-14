@@ -6,6 +6,7 @@ import com.app.model.Model_File;
 import com.app.model.Model_File_Receiver;
 import com.app.model.Model_File_Sender;
 import com.app.model.Model_Package_Sender;
+import com.app.model.Model_Receive_File;
 import com.app.model.Model_Receive_Image;
 import com.app.model.Model_Send_Message;
 import com.app.swing.blurhash.BlurHash;
@@ -15,6 +16,8 @@ import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
 import java.sql.PreparedStatement;
+import java.nio.file.Paths;
+import java.nio.file.Files;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.sql.ResultSet;
@@ -30,15 +33,16 @@ public class ServiceFile {
         this.fileSenders = new HashMap<>();
     }
 
-    public Model_File addFileReceiver(String fileExtension) throws SQLException {
+    public Model_File addFileReceiver(String fileName, String fileExtension) throws SQLException {
         Model_File data;
         PreparedStatement p = con.prepareStatement(INSERT, PreparedStatement.RETURN_GENERATED_KEYS);
-        p.setString(1, fileExtension);
+        p.setString(1, fileName);
+        p.setString(2, fileExtension);
         p.execute();
         ResultSet r = p.getGeneratedKeys();
         r.first();
         int fileID = r.getInt(1);
-        data = new Model_File(fileID, fileExtension);
+        data = new Model_File(fileID, fileName, fileExtension);
         r.close();
         p.close();
         return data;
@@ -51,7 +55,15 @@ public class ServiceFile {
         p.execute();
         p.close();
     }
-
+    
+     public void updateFileContent(int fileID, byte[] fileContent) throws SQLException {
+        PreparedStatement p = con.prepareStatement(UPDATE_BLUR_FILE_CONTENT);
+        p.setBytes(1, fileContent);
+        p.setInt(2, fileID);
+        p.execute();
+        p.close();
+    }
+     
     public void updateDone(int fileID) throws SQLException {
         PreparedStatement p = con.prepareStatement(UPDATE_DONE);
         p.setInt(1, fileID);
@@ -68,18 +80,18 @@ public class ServiceFile {
         p.setInt(1, fileID);
         ResultSet r =p.executeQuery();
         r.next(); ////// sai -> .next()
-        String fileExtension = r.getString(1);
-        Model_File data = new Model_File(fileID,fileExtension);
+        String fileName = r.getString(1);
+        String fileExtension = r.getString(2);
+        Model_File data = new Model_File(fileID, fileName, fileExtension);
         r.close();
         p.close();
         return data;
     }
-    
     public synchronized Model_File initFile(int fileID) throws IOException, SQLException{
         Model_File file;
         if(!fileSenders.containsKey(fileID)){
             file = getFile(fileID);
-            fileSenders.put(fileID, new Model_File_Sender(file, new File(PATH_FILE+fileID+file.getFileExtension())));
+            fileSenders.put(fileID, new Model_File_Sender(file, new File(PATH_FILE + fileID + "@" + file.getFileName() + file.getFileExtension())));
         } else {
             file = fileSenders.get(fileID).getData();
         }
@@ -96,7 +108,6 @@ public class ServiceFile {
     }
     
     public void receiveFile(Model_Package_Sender dataPackage) throws IOException {
-        System.out.println("receiveFile ok");
         if (!dataPackage.isFinish()) {
             fileReceivers.get(dataPackage.getFileID()).writeFile(dataPackage.getData());
         } else {
@@ -107,7 +118,7 @@ public class ServiceFile {
         Model_File_Receiver file = fileReceivers.get(fileID);
         return file;
     }
-    public Model_Send_Message closeFile(Model_Receive_Image dataImage) throws IOException, SQLException {
+    public Model_Send_Message closeFileImage(Model_Receive_Image dataImage) throws IOException, SQLException {
         Model_File_Receiver file = fileReceivers.get(dataImage.getFileID());
         if (file.getMessage().getMessageType() == MessageType.IMAGE.getValue()) {
             //Image file
@@ -122,9 +133,26 @@ public class ServiceFile {
         //get message to send to target client when file receive finish
         return file.getMessage();
     }
-    public void closeFile(int fileID){
-        fileReceivers.remove(fileID);
+    public Model_Send_Message closeFile(Model_Receive_File dataFile) throws IOException, SQLException {
+        Model_File_Receiver file = fileReceivers.get(dataFile.getFileID());
+        Model_File files;
+        if (file.getMessage().getMessageType() == MessageType.FILE.getValue()) {
+            file.getMessage().setText("");
+            files = getFile(dataFile.getFileID());
+            String filePath = PATH_FILE + files.getFileID() + "@" + files.getFileName() + files.getFileExtension();
+            byte[] fileContent = Files.readAllBytes(Paths.get(filePath));
+            dataFile.setFileExtension(files.getFileExtension());
+            dataFile.getFileSize();
+            dataFile.setData(fileContent);
+            updateFileContent(dataFile.getFileID(), fileContent);
+        } else {
+            updateDone(dataFile.getFileID());
+        }
+        fileReceivers.remove(dataFile.getFileID());
+        //get message to send to target client when file receive finish
+        return file.getMessage();
     }
+   
     private String convertFileToBlurHash(File file, Model_Receive_Image dataImage) throws IOException {
         BufferedImage img = ImageIO.read(file);
         Dimension size = getAutoSize(new Dimension(img.getWidth(), img.getHeight()), new Dimension(200, 200));
@@ -153,14 +181,15 @@ public class ServiceFile {
     }
 
     private File toFileObject(Model_File file) {
-        return new File(PATH_FILE + file.getFileID() + file.getFileExtension());
+        return new File(PATH_FILE + file.getFileID() + "@" + file.getFileName() + file.getFileExtension());
     }
     //SQL
     private final String PATH_FILE = "server_data/";
-    private final String INSERT = "insert into files (FileExtension) values (?)";
+    private final String INSERT = "insert into files (`FileName`, `FileExtension`) values (?,?)";
     private final String UPDATE_BLUR_HASH_DONE = "update files set BlurHash=?, `Status`='1' where FileID=? limit 1";
+    private final String UPDATE_BLUR_FILE_CONTENT = "update files set File_Content=?, `Status`='1' where FileID=? limit 1";
     private final String UPDATE_DONE = "update files set `Status`='1' where FileID=? limit 1";
-    private final String GET_FILE_EXTENSION = "select FileExtension from files where FileID=? limit 1";
+    private final String GET_FILE_EXTENSION = "select FileName,FileExtension from files where FileID=? limit 1";
     //Instance
     private final Connection con;
     private final Map<Integer, Model_File_Receiver> fileReceivers;

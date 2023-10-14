@@ -33,21 +33,44 @@ public class Model_Send_Message {
     public void setText(String text) {
         this.text = text;
     }
-    
-    public Model_Send_Message(int messageType, int fromUserID, int toUserID, String text){
+
+    public String getFileExtension() {
+        return getExtensions(text);
+    }
+
+    public String getFileName() {
+        return getName(text);
+    }
+
+    public Model_Send_Message(int messageType, int fromUserID, int toUserID, String text) {
         this.messageType = messageType;
         this.fromUserID = fromUserID;
         this.toUserID = toUserID;
         this.text = text;
     }
-    
-    public Model_Send_Message(){
+
+    public Model_Send_Message() {
     }
-    
-    
+
     private int messageType;
     private int fromUserID;
     private int toUserID;
     private String text;
+
+    private String getExtensions(String fileName) {
+        int dotIndex = fileName.lastIndexOf(".");
+        if (dotIndex != -1) {
+            return fileName.substring( dotIndex,fileName.length());
+        }
+        return fileName; 
+    }
+
+    private String getName(String fileName) {
+        int dotIndex = fileName.lastIndexOf(".");
+        if (dotIndex != -1) {
+            return fileName.substring(0, dotIndex);
+        }
+        return fileName; 
+    }
 
 }

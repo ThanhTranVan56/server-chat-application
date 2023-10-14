@@ -3,6 +3,7 @@ package com.app.service;
 import com.app.connection.DatabaseConnection;
 import com.app.model.Model_File;
 import com.app.model.Model_Load_Data;
+import com.app.model.Model_Receive_File;
 import com.app.model.Model_Receive_Image;
 import com.app.model.Model_Send_Message;
 import com.app.swing.blurhash.BlurHash;
@@ -56,14 +57,20 @@ public class ServiceDataSave {
                 int fromUID = r.getInt(2);
                 int toUID = r.getInt(3);
                 String content = r.getString(4);
-                Model_Receive_Image dataImage = new Model_Receive_Image();
                 if (dataType == 4) {
+                    Model_Receive_Image dataImage = new Model_Receive_Image();
                     dataImage.setFileID(Integer.parseInt(content));
                     //System.err.println("roi" + dataImage.getFileID());
                     setdataImage(dataImage);
-                    list.add(new Model_Load_Data(dataType, fromUID, toUID, content, dataImage));
-                } else {
-                    list.add(new Model_Load_Data(dataType, fromUID, toUID, content, null));
+                    list.add(new Model_Load_Data(dataType, fromUID, toUID, content, dataImage,null));
+                } else if(dataType == 3) {
+                    Model_Receive_File dataFile = new Model_Receive_File();
+                    dataFile.setFileID(Integer.parseInt(content));
+                    getDataFile(dataFile);
+                    System.err.println("roi" + dataFile.getFileID() + "size : " + dataFile.getFileSize());
+                    list.add(new Model_Load_Data(dataType, fromUID, toUID, content, null,dataFile));
+                } else{
+                    list.add(new Model_Load_Data(dataType, fromUID, toUID, content, null,null));
                 }
             }
             r.close();
@@ -74,12 +81,24 @@ public class ServiceDataSave {
             return null;
         }
     }
-
+    
+    public void getDataFile(Model_Receive_File dataFile) throws SQLException{
+        PreparedStatement p = con.prepareStatement(GET_FILE_DATA);
+        p.setInt(1, dataFile.getFileID());
+        ResultSet r =p.executeQuery();
+        r.next(); 
+        String fileName = r.getString(1);
+        String fileExtension = r.getString(2);
+        dataFile.setFileExtension(fileName+fileExtension);
+        r.close();
+        p.close();
+    }
+    
     public Model_Receive_Image setdataImage(Model_Receive_Image dataImage) throws IOException, SQLException {
         try {
             Model_File file = serviceFile.getFile(dataImage.getFileID());
             //System.out.println(file.getFileExtension());
-            setFileImage(new File(PATH_FILE + dataImage.getFileID() + file.getFileExtension()), dataImage);
+            setFileImage(new File(PATH_FILE + dataImage.getFileID() + "@" +file.getFileName() + file.getFileExtension()), dataImage);
             return dataImage;
         } catch (IOException | SQLException e) {
             System.out.println(e);
@@ -117,6 +136,7 @@ public class ServiceDataSave {
     private final String INSERT_DATA = "insert into datasave (DataType, FromUsID, ToUsID, Content, Time) values (?,?,?,?,?)";
     //private final String GET_DATAs = "SELECT DataType,FromUsID,ToUsID,Content FROM `datasave` WHERE `FromUsID` = ? OR `ToUsID` = ? ORDER BY `DataID` ASC"; LIMIT 10 :!!!!
     private final String GET_DATA = "SELECT DataType, FromUsID, ToUsID, Content FROM (SELECT * FROM `datasave` WHERE `FromUsID` = ? OR `ToUsID` = ? ORDER BY `DataID` DESC LIMIT 10) AS subquery ORDER BY `DataID` ASC;";
+    private final String GET_FILE_DATA = "select FileName,FileExtension from files where FileID=? limit 1";
     //Instance
     private final Connection con;
 

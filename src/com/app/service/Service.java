@@ -8,6 +8,7 @@ import com.app.model.Model_Load_Data;
 import com.app.model.Model_Login;
 import com.app.model.Model_Message;
 import com.app.model.Model_Package_Sender;
+import com.app.model.Model_Receive_File;
 import com.app.model.Model_Receive_Image;
 import com.app.model.Model_Receive_Message;
 import com.app.model.Model_Register;
@@ -115,21 +116,22 @@ public class Service {
                     serviceFile.receiveFile(t);
                     if (t.isFinish()) {
                         ar.sendAckData(true);
-                        //////////////////////////////////////////////////// LOADING.....
                         Model_File_Receiver message = serviceFile.setColseFile(t.getFileID());
-                        System.out.println("getFromUserID: " + message.getMessage().getFromUserID() + " getToUserID: " + message.getMessage().getToUserID() + " getText: " + message.getMessage().getText() + " getMessageType: " + message.getMessage().getMessageType());
+                        //System.out.println("getFromUserID: " + message.getMessage().getFromUserID() + " getToUserID: " + message.getMessage().getToUserID() + " getText: " + message.getMessage().getText() + " getMessageType: " + message.getMessage().getMessageType());
                         if (message.getMessage().getMessageType() == MessageType.IMAGE.getValue()) {
                             Model_Receive_Image dataImage = new Model_Receive_Image();
                             dataImage.setFileID(t.getFileID());
-                            System.out.println("1: getFileID: " + dataImage.getFileID() + " getHeight: " + dataImage.getHeight() + " getWidth: " + dataImage.getWidth() + " getImage: " + dataImage.getImage());
-                            Model_Send_Message messages = serviceFile.closeFile(dataImage);
-                            System.out.println("2: getFileID: " + dataImage.getFileID() + " getHeight: " + dataImage.getHeight() + " getWidth: " + dataImage.getWidth() + " getImage: " + dataImage.getImage());
-                            sendTempFileToClient(messages, dataImage);
+                            Model_Send_Message messages = serviceFile.closeFileImage(dataImage);
+                            sendTempFileImageToClient(messages, dataImage);
+                            //System.out.println(messages.getMessageType() + "   :  " + messages.getFromUserID());
                         }else if(message.getMessage().getMessageType() == MessageType.FILE.getValue()){
-                            serviceFile.closeFile(t.getFileID());
+                           // System.out.println("đây r");
+                            Model_Receive_File dataFile = new Model_Receive_File();
+                            dataFile.setFileID(t.getFileID());
+                            Model_Send_Message messages = serviceFile.closeFile(dataFile);
+                            sendTempFileToClient(messages, dataFile);
+                            //System.out.println(messages.getMessageType() + "   :  " + messages.getFromUserID());
                         }
-                        /////////////////////////////// 
-                        //Send to clinet 'message'
                     } else {
                         ar.sendAckData(true);
                     }
@@ -145,7 +147,7 @@ public class Service {
             public void onData(SocketIOClient sioc, Integer t, AckRequest ar) throws Exception {
                 Model_File file = serviceFile.initFile(t);
                 long fileSize = serviceFile.getFileSize(t);
-                ar.sendAckData(file.getFileExtension(), fileSize);
+                ar.sendAckData(file.getFileName(),file.getFileExtension(), fileSize);
             }
         });
 
@@ -204,7 +206,7 @@ public class Service {
     private void sendToClient(Model_Send_Message data, AckRequest ar) throws SQLException {
         if (data.getMessageType() == MessageType.IMAGE.getValue() || data.getMessageType() == MessageType.FILE.getValue()) {
             try {
-                Model_File file = serviceFile.addFileReceiver(data.getText());
+                Model_File file = serviceFile.addFileReceiver(data.getFileName(),data.getFileExtension());
                 serviceFile.initFile(file, data);
                 ar.sendAckData(file.getFileID());
                 Model_Send_Message datafile = new Model_Send_Message();
@@ -221,18 +223,28 @@ public class Service {
             serviceDataSave.dataSave(data);
             for (Model_Client c : listClient) {
                 if (c.getUser().getUserID() == data.getToUserID()) {
-                    c.getClient().sendEvent("receive_ms", new Model_Receive_Message(data.getMessageType(), data.getFromUserID(), data.getText(), null));
+                    c.getClient().sendEvent("receive_ms", new Model_Receive_Message(data.getMessageType(), data.getFromUserID(), data.getText(), null,null));
                     break;
                 }
             }
         }
     }
 
-    private void sendTempFileToClient(Model_Send_Message data, Model_Receive_Image dataImage) {
+    private void sendTempFileImageToClient(Model_Send_Message data, Model_Receive_Image dataImage) {
         for (Model_Client c : listClient) {
             if (c.getUser().getUserID() == data.getToUserID()) {
-                System.out.println("ID : " + dataImage.getFileID() + "he: " + dataImage.getHeight() + "wi: " + dataImage.getWidth());
-                c.getClient().sendEvent("receive_ms", new Model_Receive_Message(data.getMessageType(), data.getFromUserID(), data.getText(), dataImage));
+                //System.out.println("ID : " + dataImage.getFileID() + "he: " + dataImage.getHeight() + "wi: " + dataImage.getWidth());
+                c.getClient().sendEvent("receive_ms", new Model_Receive_Message(data.getMessageType(), data.getFromUserID(), data.getText(), dataImage,  null));
+                break;
+            }
+        }
+    }
+    
+    private void sendTempFileToClient(Model_Send_Message data, Model_Receive_File dataFile) {
+        for (Model_Client c : listClient) {
+            if (c.getUser().getUserID() == data.getToUserID()) {
+                //System.out.println("ID : " + dataFile.getFileID() + "he: " + dataFile.getFileExtension() + "wi: " + dataFile.getFileSize());
+                c.getClient().sendEvent("receive_ms", new Model_Receive_Message(data.getMessageType(), data.getFromUserID(), data.getText(), null,  dataFile));
                 break;
             }
         }
