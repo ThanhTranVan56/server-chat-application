@@ -64,4 +64,15 @@ public class Model_File_Sender {
             return null;
         }
     }
+
+    public byte[] read() throws IOException {
+        accFile.seek(fileSize);
+        if (fileSize != 0) {
+            byte[] b = new byte[(int) fileSize];
+            accFile.read(b);
+            return b;
+        } else {
+            return null;
+        }
+    }
 }

@@ -19,6 +19,7 @@ import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.List;
 import java.sql.ResultSet;
+import java.util.Date;
 import javax.imageio.ImageIO;
 
 public class ServiceDataSave {
@@ -45,32 +46,35 @@ public class ServiceDataSave {
 
     }
 
-    public List<Model_Load_Data> getData(int getUsIDData) throws SQLException, IOException {
+    public List<Model_Load_Data> getData(int toID, int uID) throws SQLException, IOException {
         try {
             List<Model_Load_Data> list = new ArrayList<>();
             PreparedStatement p = con.prepareStatement(GET_DATA);
-            p.setInt(1, getUsIDData);
-            p.setInt(2, getUsIDData);
+            p.setInt(1, toID);
+            p.setInt(2, uID);
+            p.setInt(3, uID);
+            p.setInt(4, toID);
             ResultSet r = p.executeQuery();
             while (r.next()) {
                 int dataType = r.getInt(1);
                 int fromUID = r.getInt(2);
                 int toUID = r.getInt(3);
                 String content = r.getString(4);
+                Timestamp dateTime = r.getTimestamp(5);
                 if (dataType == 4) {
                     Model_Receive_Image dataImage = new Model_Receive_Image();
                     dataImage.setFileID(Integer.parseInt(content));
                     //System.err.println("roi" + dataImage.getFileID());
                     setdataImage(dataImage);
-                    list.add(new Model_Load_Data(dataType, fromUID, toUID, content, dataImage,null));
+                    list.add(new Model_Load_Data(dataType, fromUID, toUID, content,dateTime , dataImage,null));
                 } else if(dataType == 3) {
                     Model_Receive_File dataFile = new Model_Receive_File();
                     dataFile.setFileID(Integer.parseInt(content));
                     getDataFile(dataFile);
                     System.err.println("roi" + dataFile.getFileID() + "size : " + dataFile.getFileSize());
-                    list.add(new Model_Load_Data(dataType, fromUID, toUID, content, null,dataFile));
+                    list.add(new Model_Load_Data(dataType, fromUID, toUID, content,dateTime, null,dataFile));
                 } else{
-                    list.add(new Model_Load_Data(dataType, fromUID, toUID, content, null,null));
+                    list.add(new Model_Load_Data(dataType, fromUID, toUID, content,dateTime, null,null));
                 }
             }
             r.close();
@@ -135,7 +139,7 @@ public class ServiceDataSave {
     private final String PATH_FILE = "server_data/";
     private final String INSERT_DATA = "insert into datasave (DataType, FromUsID, ToUsID, Content, Time) values (?,?,?,?,?)";
     //private final String GET_DATAs = "SELECT DataType,FromUsID,ToUsID,Content FROM `datasave` WHERE `FromUsID` = ? OR `ToUsID` = ? ORDER BY `DataID` ASC"; LIMIT 10 :!!!!
-    private final String GET_DATA = "SELECT DataType, FromUsID, ToUsID, Content FROM (SELECT * FROM `datasave` WHERE `FromUsID` = ? OR `ToUsID` = ? ORDER BY `DataID` DESC LIMIT 10) AS subquery ORDER BY `DataID` ASC;";
+    private final String GET_DATA = "SELECT DataType, FromUsID, ToUsID, Content, Time FROM (SELECT * FROM `datasave` WHERE (`FromUsID` = ? and `ToUsID` = ?) or (`FromUsID` = ? and `ToUsID` = ?) ORDER BY `DataID` DESC LIMIT 10) AS subquery ORDER BY `DataID` ASC;";
     private final String GET_FILE_DATA = "select FileName,FileExtension from files where FileID=? limit 1";
     //Instance
     private final Connection con;

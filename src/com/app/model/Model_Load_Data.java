@@ -1,5 +1,8 @@
 package com.app.model;
 
+import java.sql.Timestamp;
+import java.util.Date;
+
 public class Model_Load_Data {
 
     public Model_Receive_File getDataFile() {
@@ -49,11 +52,20 @@ public class Model_Load_Data {
         this.text = text;
     }
     
-    public Model_Load_Data(int messageType, int fromUserID, int toUserID, String text, Model_Receive_Image dataImage, Model_Receive_File dataFile){
+    public Date getDateTime() {
+        return dateTime;
+    }
+
+    public void setDateTime(Timestamp dateTime) {
+        this.dateTime = dateTime;
+    }
+    
+    public Model_Load_Data(int messageType, int fromUserID, int toUserID, String text, Timestamp  dateTime, Model_Receive_Image dataImage, Model_Receive_File dataFile){
         this.messageType = messageType;
         this.fromUserID = fromUserID;
         this.toUserID = toUserID;
         this.text = text;
+        this.dateTime = dateTime;
         this.dataImage = dataImage;
         this.dataFile = dataFile;
     }
@@ -65,10 +77,10 @@ public class Model_Load_Data {
     private int fromUserID;
     private int toUserID;
     private String text;
+    private Timestamp  dateTime;
     private Model_Receive_Image dataImage;
     private Model_Receive_File dataFile;
-
-    
+ 
 
 }
 

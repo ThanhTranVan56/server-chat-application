@@ -2,6 +2,7 @@ package com.app.service;
 
 import com.app.apps.MessageType;
 import com.app.connection.DatabaseConnection;
+import com.app.model.Model_Avata_Receiver;
 import com.app.model.Model_File;
 import com.app.model.Model_File_Receiver;
 import com.app.model.Model_File_Sender;
@@ -31,6 +32,7 @@ public class ServiceFile {
         this.con = DatabaseConnection.getInstance().getConnection();
         this.fileReceivers = new HashMap<>();
         this.fileSenders = new HashMap<>();
+        this.avataReceivers = new HashMap<>();
     }
 
     public Model_File addFileReceiver(String fileName, String fileExtension) throws SQLException {
@@ -74,6 +76,10 @@ public class ServiceFile {
     public void initFile(Model_File file, Model_Send_Message message) throws IOException {
         fileReceivers.put(file.getFileID(), new Model_File_Receiver(message, toFileObject(file)));
     }
+    
+    public void initAvata(Model_File file) throws IOException{
+        avataReceivers.put(file.getFileID(), new Model_Avata_Receiver(toFileObject(file)));
+    }
 
     public Model_File getFile(int fileID) throws SQLException{
         PreparedStatement p = con.prepareStatement(GET_FILE_EXTENSION);
@@ -103,6 +109,11 @@ public class ServiceFile {
         return fileSenders.get(fileID).read(currentLength);
     }
     
+    public byte[] getFileDate(int fileID) throws IOException, SQLException{
+        initFile(fileID);
+        return fileSenders.get(fileID).read();
+    }
+    
     public long getFileSize(int fileID){
         return fileSenders.get(fileID).getFileSize();
     }
@@ -114,6 +125,15 @@ public class ServiceFile {
             fileReceivers.get(dataPackage.getFileID()).close();
         }
     }
+    
+    public void receiveAvata(Model_Package_Sender dataPackage) throws IOException {
+        if (!dataPackage.isFinish()) {
+            avataReceivers.get(dataPackage.getFileID()).writeFile(dataPackage.getData());
+        } else {
+            avataReceivers.get(dataPackage.getFileID()).close();
+        }
+    }
+    
     public Model_File_Receiver setColseFile(int fileID){
         Model_File_Receiver file = fileReceivers.get(fileID);
         return file;
@@ -194,4 +214,5 @@ public class ServiceFile {
     private final Connection con;
     private final Map<Integer, Model_File_Receiver> fileReceivers;
     private final Map<Integer, Model_File_Sender> fileSenders;
+    private final Map<Integer, Model_Avata_Receiver> avataReceivers;
 }

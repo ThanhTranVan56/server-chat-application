@@ -1,5 +1,7 @@
 package com.app.model;
 
+import java.util.Base64;
+
 public class Model_User_Account {
 
     public int getUserID() {
