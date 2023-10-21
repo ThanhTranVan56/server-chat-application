@@ -138,7 +138,7 @@ public class ServiceUser {
         s.setInt(1, userID);
         s.executeUpdate();
         s.close();
-        try ( PreparedStatement p = con.prepareStatement(UPDATE_USER_AVATA)) {
+        try (PreparedStatement p = con.prepareStatement(UPDATE_USER_AVATA)) {
             FileInputStream fis = new FileInputStream(image);
             p.setBinaryStream(1, fis);
             p.setInt(2, userID);
@@ -163,20 +163,49 @@ public class ServiceUser {
         }
         return false;
     }
+
     //getUserAvata
-    public byte[] getUserAvata(int userID) throws SQLException{
+    public byte[] getUserAvata(int userID) throws SQLException {
         byte[] avatarData = null;
         PreparedStatement p = con.prepareStatement(SELECT_AVATA_USER);
         p.setInt(1, userID);
         ResultSet r = p.executeQuery();
         if (r.next()) {
-                Blob avatarBlob = r.getBlob("Image");
-                if (avatarBlob != null) {
-                    avatarData = avatarBlob.getBytes(1, (int) avatarBlob.length());
-                    avatarBlob.free();
-                }
+            Blob avatarBlob = r.getBlob("Image");
+            if (avatarBlob != null) {
+                avatarData = avatarBlob.getBytes(1, (int) avatarBlob.length());
+                avatarBlob.free();
             }
+        }
         return avatarData;
+    }
+
+    //getUser
+    public String getUserNamePass(int userID) throws SQLException {
+        String re;
+        PreparedStatement p = con.prepareStatement(SELECT_USER);
+        p.setInt(1, userID);
+        ResultSet r = p.executeQuery();
+        r.next();
+        String name = r.getString(1);
+        String pass = r.getString(2);
+        re = name + "@" + pass;
+        return re;
+    }
+
+    public boolean updateUser(int userID, String userName, String password) throws SQLException {
+        try {
+            PreparedStatement p = con.prepareStatement(UPDATE_USER);
+            p.setString(1, userName);
+            p.setString(2, password);
+            p.setInt(3, userID);
+            p.executeUpdate();
+            p.close();
+            return true;
+        } catch (SQLException e) {
+            System.out.println("loi: " + e);
+            return false;
+        }  
     }
     //SQL
     private final String LOGIN = "select UserID,user_account.UserName,Gender,ImageString from `user` join user_account using (UserID) where `user`.UserName=BINARY(?) and `user`.`Password`=BINARY(?) and user_account.`Status`='1'";
@@ -189,6 +218,8 @@ public class ServiceUser {
     private final String RESET_USER_AVATA = "update user_account  set `Image` = ''  where UserID=? limit 1;";
     private final String UPDATE_AVATA_DONE = "update user_account set `ImageString`= '1' where UserID=? limit 1";
     private final String SELECT_AVATA_USER = "select Image from user_account where UserID = ?";
+    private final String SELECT_USER = "select `UserName`,`Password` from user where UserID = ?";
+    private final String UPDATE_USER = "update user set `UserName`= ?,`Password` = ? where UserID=?";
     //Instance
     private final Connection con;
 

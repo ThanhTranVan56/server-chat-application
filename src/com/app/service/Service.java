@@ -105,6 +105,25 @@ public class Service {
             }
 
         });
+        //get_username_pass
+        server.addEventListener("get_username_pass", Integer.class, new DataListener<Integer>() {
+            @Override
+            public void onData(SocketIOClient sioc, Integer t, AckRequest ar) throws Exception {
+                String re = serviceUser.getUserNamePass(t);
+                ar.sendAckData(re);
+            }
+
+        });
+        //update_username_pass
+        server.addEventListener("update_username_pass", String.class, new DataListener<String>() {
+            @Override
+            public void onData(SocketIOClient sioc, String message, AckRequest ar) throws Exception {
+                String[] parts = message.split("@");
+                boolean re = serviceUser.updateUser(Integer.parseInt(parts[0]),parts[1],parts[2]);
+                ar.sendAckData(re);
+            }
+
+        });
         server.addEventListener("user_join_group", String.class, new DataListener<String>() {
             @Override
             public void onData(SocketIOClient socketIOClient, String groupName, AckRequest ackRequest) throws Exception {
@@ -138,19 +157,15 @@ public class Service {
         server.addEventListener("send_join_group", String.class, new DataListener<String>() {
             @Override
             public void onData(SocketIOClient socketIOClient, String message, AckRequest ackRequest) throws Exception {
-                System.out.println("send_join_group" + message);
                 String[] parts = message.split("@");
-                System.out.println("send_join_group" + message);
                 if ("OK".equals(parts[0])) {
                     for (Model_Client d : listClient) {
                         if (d.getUser().getUserName().equals(parts[1])) {
-                            //d.getClient().joinRoom(parts[2]);
+                            d.getClient().joinRoom(parts[2]);
                             String messages = "Welcome to the group";
                             d.getClient().sendEvent("send_join_group", messages);
                             int groupID = serviceGroup.getGroupID(parts[2]);
-                            System.out.println("send_join_group" + parts[0] +parts[1]+parts[2]);
                             serviceGroup.setMemberGroup(groupID, d.getUser().getUserID());
-                            System.out.println("send_join_group gID:" + groupID + "uID: "+d.getUser().getUserID());
                             break;
                         }
                     }
@@ -159,7 +174,6 @@ public class Service {
                     for (Model_Client d : listClient) {
                         if (d.getUser().getUserName().equals(parts[1])) {
                             String messages = "So sorry";
-                            System.out.println("send_join_group" + parts[0] +parts[1]+parts[2]);
                             d.getClient().sendEvent("send_join_group", messages);
                             break;
                         }
