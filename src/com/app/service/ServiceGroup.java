@@ -181,6 +181,17 @@ public class ServiceGroup {
         p.close();
         return listID;
     }
+    
+    public int getAdminID(int groupID) throws SQLException {
+        PreparedStatement p = con.prepareStatement(SELECT_GROUP_ADMIN_GRID);
+        p.setInt(1, groupID);
+        ResultSet r = p.executeQuery();
+        r.next();
+        int adminID = r.getInt(1);
+        r.close();
+        p.close();
+        return adminID;
+    }
     //SQL
     private final String CHECK_GROUP = "select AdminID from `group` where GroupName = ?";
     private final String INSERT_GROUP = "INSERT INTO `group` (GroupName, AdminID) VALUES (?, ?)";
@@ -191,6 +202,6 @@ public class ServiceGroup {
     private final String SELECT_GROUP_ADMIN = "select AdminID from `group` where GroupName = ?";
     private final String SELECT_GROUPID = "select GroupID from `group` where GroupName = ?";
     private final String CHECK_MEMBER = "select MemberID from `group_member` where GroupID = ?";
-    //Instance
+    private final String SELECT_GROUP_ADMIN_GRID = "select AdminID from `group` where GroupID = ?";
     private final Connection con;
 }

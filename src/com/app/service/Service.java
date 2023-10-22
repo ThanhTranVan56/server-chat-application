@@ -105,6 +105,7 @@ public class Service {
             }
 
         });
+
         //get_username_pass
         server.addEventListener("get_username_pass", Integer.class, new DataListener<Integer>() {
             @Override
@@ -119,7 +120,7 @@ public class Service {
             @Override
             public void onData(SocketIOClient sioc, String message, AckRequest ar) throws Exception {
                 String[] parts = message.split("@");
-                boolean re = serviceUser.updateUser(Integer.parseInt(parts[0]),parts[1],parts[2]);
+                boolean re = serviceUser.updateUser(Integer.parseInt(parts[0]), parts[1], parts[2]);
                 ar.sendAckData(re);
             }
 
@@ -132,7 +133,6 @@ public class Service {
                 boolean isAction = false;
                 String messageRe = "Đang chờ phản hồi từ Admin";
                 ackRequest.sendAckData(isAction, messageRe);
-                System.out.print("da toi day r");
                 for (Model_Client d : listClient) {
                     if (d.getClient() == socketIOClient) {
                         uName = d.getUser().getUserName();
@@ -258,13 +258,22 @@ public class Service {
                     }
                 }
                 if (!found) {
+                    int adminID = serviceGroup.getAdminID(groupID);
                     for (Model_Client d : listClient) {
-                        if (socketIOClient == d.getClient()) {
-                            isaction = serviceGroup.checkMemberGroup(groupID, d.getUser().getUserID());
-                            ackRequest.sendAckData(isaction);
-                            socketIOClient.joinRoom(serviceGroup.getGroupName(groupID));
+                        if (d.getUser().getUserID() == adminID) {
                             found = true;
-                            break;
+                        }
+
+                    }
+                    if (found) {
+                        for (Model_Client d : listClient) {
+                            if (socketIOClient == d.getClient()) {
+                                isaction = serviceGroup.checkMemberGroup(groupID, d.getUser().getUserID());
+                                ackRequest.sendAckData(isaction);
+                                socketIOClient.joinRoom(serviceGroup.getGroupName(groupID));
+                                found = true;
+                                break;
+                            }
                         }
                     }
                 }
@@ -280,7 +289,7 @@ public class Service {
                 List<Integer> list = new ArrayList<>();
                 list = serviceGroup.getMemberGroup(groupID);
                 List<Model_User_Account> listU = new ArrayList<>();
-                for(int l : list){
+                for (int l : list) {
                     listU.add(serviceUser.getOneUser(l));
                 }
                 ackRequest.sendAckData(listU.toArray());
@@ -419,7 +428,6 @@ public class Service {
                             String groupName = serviceGroup.getGroupName(messages.getToUserID());
 
                             Model_File file = serviceFile.initFile(t.getFileID());
-                            System.out.println("send_file_group:" + groupName);
                             long fileSize = serviceFile.getFileSize(t.getFileID());
                             Model_Receive_Image_Group dataImageGroup = new Model_Receive_Image_Group(dataImage.getFileID(), file.getFileName(), file.getFileExtension(), fileSize, dataImage.getImage(), dataImage.getWidth(), dataImage.getHeight());
 
@@ -427,7 +435,6 @@ public class Service {
                             Path path = Paths.get(filepath);
                             try {
                                 byte[] dataIMM = Files.readAllBytes(path);
-                                System.out.println("send_file_group dataIMM2:" + Arrays.toString(dataIMM));
                                 sendTempFileImageToGroup(sioc, messages, groupName, dataImageGroup, dataIMM);
                             } catch (IOException e) {
                                 System.err.println("Lỗi khi đọc dữ liệu từ tệp tin: " + e.getMessage());
@@ -485,6 +492,20 @@ public class Service {
                 }
             }
 
+        });
+        //user_logout
+        server.addEventListener("user_logout", Void.class, new DataListener<Void>() {
+            @Override
+            public void onData(SocketIOClient sioc, Void data, AckRequest ar) throws Exception {
+                int userID = removeClient(sioc);
+                if (userID != 0) {
+                    //removed
+                    userDisconnect(userID);
+                    ar.sendAckData(true);
+                } else {
+                    ar.sendAckData(false);
+                }
+            }
         });
 
         server.addDisconnectListener(new DisconnectListener() {
